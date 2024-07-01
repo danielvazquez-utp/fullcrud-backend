@@ -4,8 +4,19 @@ from pydantic import BaseModel
 from typing import List, Union
 import mysql.connector
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
 PORT: int = 8080
+
+# USar el siguiente Middleware sólo para pruebas locales y no en producción
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*']
+    )
 
 db = mysql.connector.connect(
     host="localhost",
@@ -43,6 +54,36 @@ def getUsuarios():
         return {"status":"ok", "msg":"Si hay usuarios", "data": usuarios} 
     else:
         return {"status":"ok", "msg":"No hay usuarios registrados"}
+
+@app.post("/usuarioByUC")
+def getUsuarioByUsuarioContrasena(user:Usuario):
+    try:
+        query = "SELECT * FROM usuarios WHERE usuario='{}' AND contrasena='{}';".format(user.usuario, user.contrasena)
+        cursor = db.cursor()
+        cursor.execute(query)
+        record = cursor.fetchone()
+        no_regs = cursor.rowcount
+        if no_regs>0:
+            usuario = {
+                "id_usuario":  record[0],
+                "usuario"   :  record[1],
+                "contrasena":  record[2],
+            }
+            return {
+                "status":"ok", 
+                "msg":"Usuario encontrado", 
+                "data": usuario
+                }
+        else:
+            return {
+                "status":"error", 
+                "msg":"Usuario no encontrado", 
+                }
+    except:
+        return {
+                "status":"error", 
+                "msg":"Ocurrio un error en la consulta", 
+                }
     
 @app.post("/usuarios")
 def setUsuario(user: Usuario):
@@ -56,6 +97,49 @@ def setUsuario(user: Usuario):
         "data": { 
             "id_usuario": lastIndex("usuarios", "id_usuario") 
             }
+        }
+
+@app.put("/usuarios")
+def updateUsuario(user: Usuario):
+    print("entra")
+    try:
+        query = "UPDATE usuarios SET usuario='{}', contrasena='{}' WHERE id_usuario={};".format(user.usuario, user.contrasena, user.id_usuario)
+        print("\n->", query)
+        cursor = db.cursor()
+        cursor.execute(query)
+        db.commit()
+        return {
+            "status":"ok", 
+            "msg":"Usuario modificado", 
+            "data": { 
+                "id_usuario": user.id_usuario
+                }
+        }
+    except:
+        return {
+                "status":"error", 
+                "msg":"Ocurrio un error en la consulta", 
+        }
+
+@app.delete("/usuarios")
+def delUsuario(user: Usuario):
+    try:
+        query = "DELETE from usuarios WHERE id_usuario={};".format(user.id_usuario)
+        print("\n->", query)
+        cursor = db.cursor()
+        cursor.execute(query)
+        db.commit()
+        return {
+            "status":"ok", 
+            "msg":"Usuario eliminado", 
+            "data": { 
+                "id_usuario": user.id_usuario
+                }
+        }
+    except:
+        return {
+                "status":"error", 
+                "msg":"Ocurrio un error en el borrado del usuario", 
         }
 
 def lastIndex(tabla:str, attr:str):
