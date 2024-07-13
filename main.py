@@ -31,6 +31,15 @@ class Usuario(BaseModel):
     usuario: str
     contrasena: str
 
+class Persona(BaseModel):
+    id_persona:Union[int, None] = None
+    nombres:str
+    apellidoP:str
+    apellidoM:str
+    fechaNac:str
+    estadoCivil:str
+    numhijos:int
+
 @app.get("/")
 def message():
     return {"msg": "Hola mundo desde FastAPI"}
@@ -141,6 +150,41 @@ def delUsuario(user: Usuario):
                 "status":"error", 
                 "msg":"Ocurrio un error en el borrado del usuario", 
         }
+
+@app.get("/personas")
+def getPersonas():
+    personas=[]
+    query = "select * from personas;"
+    cursor = db.cursor()
+    cursor.execute(query)
+    records = cursor.fetchall()
+    no_res = cursor.rowcount
+    if no_res > 0:
+        for record in records:
+            persona = {
+                "id_persona" : record[0],
+                "nombres": record[1],
+                "apellidoP" : record[2],
+                "apellidoM" : record[3],
+                "fechaNac" : record[4],
+                "estadoCivil" : record[5],
+                "numhijos" : record[6],
+            }
+            personas.append(persona)
+        return {"status": "ok", "msg": "Si hay personas registrados", "data": personas}
+    else:
+        return {"status":"ok", "msg": "No hay personas registradas"}
+
+@app.post("/personas")
+def setUsuarios(per:Persona):
+    query = "insert into personas (`nombre`, `apaterno`, `amaterno`, `fechanac`, `edocivil`, `no_hijos`) values ('{}','{}','{}','{}','{}','{}')".format(per.nombres, per.apellidoP, per.apellidoM, per.fechaNac, per.estadoCivil, per.numhijos)
+    cursor = db.cursor()
+    cursor.execute(query)
+    db.commit()
+    return {"status": "ok", "msg": "Persona Agregada",
+            "data": {
+                "id_persona": lastIndex("personas", "id_persona")
+            }}
 
 def lastIndex(tabla:str, attr:str):
     query ="SELECT {} from {} order by {} desc".format(attr, tabla, attr)
