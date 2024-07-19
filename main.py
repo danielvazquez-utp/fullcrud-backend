@@ -64,6 +64,23 @@ def getUsuarios():
     else:
         return {"status":"ok", "msg":"No hay usuarios registrados"}
 
+@app.get("/usuarios/{id}")
+def getUsuarioById(id):
+    query = "SELECT * FROM usuarios WHERE id_usuario={}".format(id)
+    cursor = db.cursor()
+    cursor.execute(query)
+    record = cursor.fetchone()
+    no_regs = cursor.rowcount
+    if no_regs>0:
+        usuario = {
+            "id_usuario"    :   record[0],
+            "usuario"       :   record[1],
+            "contrasena"    :   record[2]
+        }
+        return {"status":"ok", "msg":"Si se encontró el usuario", "data": usuario} 
+    else:
+        return {"status":"error", "msg":"No se encontró el usuario"}
+
 @app.post("/usuarioByUC")
 def getUsuarioByUsuarioContrasena(user:Usuario):
     try:
